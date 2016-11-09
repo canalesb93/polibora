@@ -8,6 +8,7 @@ using System.Linq;
 public class SnakeBehaviourScript : MonoBehaviour {
 
 	private const float SPEED = 1f; // moves 1 tile per step.
+	private const int MINIMUM_SCORE = 0;
 
 	private float stepRate = 0.1f; // step rate
 	private float timeToStep = 0.35f;
@@ -16,7 +17,6 @@ public class SnakeBehaviourScript : MonoBehaviour {
 
 	public int currentLevel;
 	public MessageScript message;
-	public GameObject food;
 	// foodobjects start
 	public GameObject polieteno;
 	public GameObject poliestireno;
@@ -35,6 +35,9 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	private List<GameObject> snakeParts = new List<GameObject>();
 	private bool eat = false;
 	private bool lost = false;
+	private bool exit = false;
+	private bool firstTimeFire = true;
+	private bool firstTimeMonomer = true;
 
 	private Text scoreText;
 	private GameObject currentFire;
@@ -42,7 +45,8 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	private int score = 0;
 
 	// MESSAGES
-	string level1IntroMessage = "Si te fijas puedes ver que no todos los monómeros son iguales. Para poder formar un polímero todas las unidades enlazadas deben ser iguales, todos los monómeros deben ser del mismo tipo.";
+	string firstFireMessage = "Ouch!\n Recuerda que el fuego degrada a un polimero. Ten cuidado con el calor!";
+	string firstMonomerMessage = "Recuerda que los polimeros de adición solo funcionan con monomeros del mismo tipo.";
 
 	// Initializes Application
 	void Start () {
@@ -66,8 +70,12 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	// Update is called once per frame.
 	// Handles controls.
 	void Update () {
+
 		// if message is not shown, execute game...
 		if (!message.IsShown()) {
+			if (exit) {
+				SceneManager.LoadScene ("Menu", LoadSceneMode.Single);
+			}
 
 			// Update Steps
 			if (timeToStep <= 0f) {
@@ -84,21 +92,39 @@ public class SnakeBehaviourScript : MonoBehaviour {
 			timeToFire -= Time.deltaTime;
 
 			// Check input keys, can't move in opposite direction.
-			if (Input.GetKey (KeyCode.RightArrow) && transform.eulerAngles.z != 90) {
+			if (Input.GetKeyDown (KeyCode.RightArrow) && transform.eulerAngles.z != 90) {
 				newDirection = new Vector3 (0, 0, 270);
-			} else if (Input.GetKey (KeyCode.UpArrow) && transform.eulerAngles.z != 180) {
+				forceStep();
+			} else if (Input.GetKeyDown (KeyCode.UpArrow) && transform.eulerAngles.z != 180) {
 				newDirection = new Vector3 (0, 0, 0);
-			} else if (Input.GetKey (KeyCode.DownArrow) && transform.eulerAngles.z != 0) {
+				forceStep();
+			} else if (Input.GetKeyDown (KeyCode.DownArrow) && transform.eulerAngles.z != 0) {
 				newDirection = new Vector3 (0, 0, 180);
-			} else if (Input.GetKey (KeyCode.LeftArrow) && transform.eulerAngles.z != 270) {
+				forceStep();
+			} else if (Input.GetKeyDown (KeyCode.LeftArrow) && transform.eulerAngles.z != 270) {
 				newDirection = new Vector3 (0, 0, 90);
+				forceStep();
 			}
 
-			if (lost) {
-				lost = false;
-				SceneManager.LoadScene ("Menu", LoadSceneMode.Single);
+			if (Input.GetKeyDown (KeyCode.Escape)) {
+				exit = true;
+			} else if (Input.GetKeyDown (KeyCode.P)) {
+				message.ShowMessage ("Pausa\n");
 			}
+
+
+			if (lost || score < MINIMUM_SCORE) {
+				lost = false;
+				ShowOutroMessage ();
+				exit = true;
+			}
+			
 		}
+	}
+
+	void forceStep(){
+		timeToStep = stepRate;
+		Step();
 	}
 
 	// ========== Game Logic ==========
@@ -107,7 +133,6 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	void Step() {
 		Vector2 ta = transform.position;
 		if (eat) {
-			
 			GameObject g =(GameObject)Instantiate(getMonomer(levelMonomer), ta, Quaternion.identity);
 			g.transform.eulerAngles = transform.eulerAngles;
 			g.tag = "Tail";
@@ -115,7 +140,6 @@ public class SnakeBehaviourScript : MonoBehaviour {
 			eat = false;
 		}
 		else if (snakeParts.Count > 0) {
-			
 			snakeParts.Last().transform.position = ta;
 			snakeParts.Last().transform.eulerAngles = transform.eulerAngles;
 			snakeParts.Insert(0, snakeParts.Last());
@@ -172,6 +196,9 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	// Handles collisions.
 	void OnTriggerEnter2D(Collider2D c) {
 		if (c.tag == "Monomer") {
+			if (stepRate > 0.05f) {
+				stepRate -= 0.0005f;
+			}
 			int monomerID = getMonomerIDByName (c.name);
 			if (monomerID == levelMonomer) {
 				eat = true;
@@ -179,64 +206,56 @@ public class SnakeBehaviourScript : MonoBehaviour {
 				SpawnFood ();
 				increaseScore ();
 			} else {
+				if (firstTimeMonomer) {
+					message.ShowMessage (firstMonomerMessage);
+					firstTimeMonomer = false;
+				}
 				decreaseScore ();
 			}
 			Destroy (c.gameObject);
 		} else if (c.name.StartsWith("fire")) {
-			if (snakeParts.Count <= 0) {
-				lost = true;
-			} else {
-				// Remove Last tail
-				GameObject g = snakeParts.Last ();
-				snakeParts.RemoveAt (snakeParts.Count - 1);
-				Destroy (g);
-				// Respawn fire
-				Destroy(c.gameObject);
-				decreaseScore ();
-				SpawnFire ();
+			if (firstTimeFire) {
+				message.ShowMessage (firstFireMessage);
+				firstTimeFire = false;
 			}
+			for (int i = 0; i < 5; i++) {
+				GameObject g = snakeParts.Last ();
+				if (g) {
+					snakeParts.RemoveAt (snakeParts.Count - 1);
+					Destroy (g);
+					decreaseScore ();
+				}
+			}
+
+			Destroy(c.gameObject);
+			SpawnFire ();
 		} else if (c.name.EndsWith("wall") || c.tag == "Tail") {
 			lost = true;
 		}
 
 		if (lost) {
-			message.ShowMessage ("Haz perdido!");
 		}
 	}
 		
 	// ========== GUI ==========
 
 	public void increaseScore() {
-		score++;
-		Debug.Log (score);
+		score+=10;
 		scoreText.text = "Puntaje: " + score;
 	}
 
 	public void decreaseScore() {
-		score--;
+		score-=15;
 		scoreText.text = "Puntaje: " + score;
 	}
 
 	private void ShowIntroMessage() {
-		switch(currentLevel) {
-		case 1:
-			message.ShowMessage ("Nivel 1\n"+level1IntroMessage);
-			break;
-		default:
-			message.HideMessage();
-			break;
-		}
+		message.ShowMessage (getMonomerNameByMonomer(levelMonomer) + "\n"+getIntroMessageByMonomer(levelMonomer));
 	}
 
 	private void ShowOutroMessage() {
-		switch(currentLevel) {
-		case 1:
-			message.ShowMessage ("");
-			break;
-		default:
-			message.HideMessage();
-			break;
-		}
+		string victoryMessage = "Game Over!\nObtuviste " + snakeParts.Count + " monomeros, haz creado " + (snakeParts.Count / 10);
+		message.ShowMessage (victoryMessage + " " + getProductNameByMonomer(levelMonomer) + "s\n" + getOutroMessageByMonomer(levelMonomer));
 	}
 
 	// ========== Utils ==========
@@ -307,12 +326,121 @@ public class SnakeBehaviourScript : MonoBehaviour {
 			return 2;
 		} else if (m.StartsWith ("policloruro")) {
 			return 3;
-		} else if (m.StartsWith ("poliproileno")) {
+		} else if (m.StartsWith ("polipropileno")) {
 			return 4;
 		} else if (m.StartsWith ("teflon")) {
 			return 5;
 		} else {
 			return 0;
+		}
+	}
+
+	private string getMonomerNameByMonomer(int m) {
+		switch(m) {
+		case 0:
+			return "Polieteno";
+			break;
+		case 1:
+			return "Poliestireno";
+			break;
+		case 2:
+			return "Polipropileno";
+			break;
+		case 3:
+			return "Policloruro";
+			break;
+		case 4:
+			return "Teflón";
+			break;
+		case 5:
+			return "Polibutadieno";
+			break;
+		default:
+			return "-";
+			break;
+		}
+	}
+
+	private string getProductNameByMonomer(int m) {
+		switch(m) {
+		case 0:
+			return "Botella";
+			break;
+		case 1:
+			return "Hielera";
+			break;
+		case 2:
+			return "Llanta";
+			break;
+		case 3:
+			return "PVC";
+			break;
+		case 4:
+			return "Cubeta";
+			break;
+		case 5:
+			return "Sarten";
+			break;
+		default:
+			return "-";
+			break;
+		}
+	}
+
+	private string getIntroMessageByMonomer(int m) {
+
+		return getOutroMessageByMonomer(m);
+
+		/*
+		switch(m) {
+		case 0:
+			return "Si te fijas puedes ver que no todos los monómeros son iguales. Para poder formar un polímero todas las unidades enlazadas deben ser iguales, todos los monómeros deben ser del mismo tipo.";
+			break;
+		case 1:
+			return "Industrial y domésticamente, el poliestireno se utiliza por su capacidad aislante.";
+			break;
+		case 2:
+			return "Llanta";
+			break;
+		case 3:
+			return "PVC";
+			break;
+		case 4:
+			return "Cubeta";
+			break;
+		case 5:
+			return "Sarten";
+			break;
+		default:
+			return "-";
+			break;
+		}
+		*/
+	}
+
+	private string getOutroMessageByMonomer(int m) {
+		switch(m) {
+		case 0:
+			return "Las botellas de plástico son increíblemente usadas en empaque y distribución de toda clase de productos cotidianos.";
+			break;
+		case 1:
+			return "Industrial y domésticamente, el poliestireno se utiliza por su capacidad aislante.";
+			break;
+		case 2:
+			return "Un plástico de polipropileno se utiliza como contenedor por su dureza por encima de uno de polietileno.";
+			break;
+		case 3:
+			return "Los tubos de PVC son famosos por su resistencia y su aislamiento térmico.";
+			break;
+		case 4:
+			return "El teflón está siempre presente en utensilios de cocina por dejar nada pegado.";
+			break;
+		case 5:
+			return "El caucho derivado del polibutadieno se encuentra cualquier neumático.";
+			break;
+		default:
+			return "-";
+			break;
 		}
 	}
 }
