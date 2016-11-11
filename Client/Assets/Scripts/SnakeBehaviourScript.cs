@@ -29,7 +29,6 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	public Transform northWall, westWall, eastWall, southWall;
 
 	private int levelMonomer;
-	private int newMonomer;
 
 	private Vector3 newDirection = new Vector3 (0, 0, 0);
 	private List<GameObject> snakeParts = new List<GameObject>();
@@ -57,6 +56,12 @@ public class SnakeBehaviourScript : MonoBehaviour {
 		scoreText = GameObject.FindWithTag ("Score").GetComponent<Text>();
 		scoreText.text = "Puntaje: " + score;
 		UpdateBorders ();
+
+		Vector2 ta = new Vector2 (transform.position.x, transform.position.y - 1);
+		GameObject g =(GameObject)Instantiate(getMonomer(levelMonomer), ta, Quaternion.identity);
+		g.transform.eulerAngles = transform.eulerAngles;
+		g.tag = "Tail";
+		snakeParts.Insert(0, g);
 	}
 
 	void UpdateBorders() {
@@ -197,12 +202,11 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	void OnTriggerEnter2D(Collider2D c) {
 		if (c.tag == "Monomer") {
 			if (stepRate > 0.05f) {
-				stepRate -= 0.0005f;
+				stepRate -= 0.001f;
 			}
 			int monomerID = getMonomerIDByName (c.name);
 			if (monomerID == levelMonomer) {
 				eat = true;
-				newMonomer = monomerID;
 				SpawnFood ();
 				increaseScore ();
 			} else {
@@ -295,25 +299,18 @@ public class SnakeBehaviourScript : MonoBehaviour {
 		switch(m) {
 		case 0:
 			return polieteno;
-			break;
 		case 1:
 			return poliestireno;
-			break;
 		case 2:
-			return polibutadieno;
-			break;
+			return poliproileno;
 		case 3:
 			return policloruro;
-			break;
 		case 4:
-			return poliproileno;
-			break;
-		case 5:
 			return teflon;
-			break;
+		case 5:
+			return polibutadieno;
 		default:
 			return polieteno;
-			break;
 		}
 	}
 
@@ -322,42 +319,35 @@ public class SnakeBehaviourScript : MonoBehaviour {
 			return 0;
 		} else if (m.StartsWith ("poliestireno")) {
 			return 1;
-		} else if (m.StartsWith ("polibutadieno")) {
+		} else if (m.StartsWith ("polipropileno")) {
 			return 2;
 		} else if (m.StartsWith ("policloruro")) {
 			return 3;
-		} else if (m.StartsWith ("polipropileno")) {
-			return 4;
 		} else if (m.StartsWith ("teflon")) {
+			return 4;
+		} else if (m.StartsWith ("polibutadieno")) {
 			return 5;
-		} else {
-			return 0;
 		}
+		return 0;
 	}
 
 	private string getMonomerNameByMonomer(int m) {
 		switch(m) {
 		case 0:
 			return "Polieteno";
-			break;
 		case 1:
 			return "Poliestireno";
-			break;
 		case 2:
 			return "Polipropileno";
 			break;
 		case 3:
 			return "Policloruro";
-			break;
 		case 4:
 			return "Teflón";
-			break;
 		case 5:
 			return "Polibutadieno";
-			break;
 		default:
 			return "-";
-			break;
 		}
 	}
 
@@ -365,82 +355,41 @@ public class SnakeBehaviourScript : MonoBehaviour {
 		switch(m) {
 		case 0:
 			return "Botella";
-			break;
 		case 1:
 			return "Hielera";
-			break;
 		case 2:
-			return "Llanta";
-			break;
+			return "Cubeta";
 		case 3:
 			return "PVC";
-			break;
 		case 4:
-			return "Cubeta";
-			break;
-		case 5:
 			return "Sarten";
-			break;
+		case 5:
+			return "Llanta";
 		default:
 			return "-";
-			break;
 		}
 	}
 
 	private string getIntroMessageByMonomer(int m) {
-
 		return getOutroMessageByMonomer(m);
-
-		/*
-		switch(m) {
-		case 0:
-			return "Si te fijas puedes ver que no todos los monómeros son iguales. Para poder formar un polímero todas las unidades enlazadas deben ser iguales, todos los monómeros deben ser del mismo tipo.";
-			break;
-		case 1:
-			return "Industrial y domésticamente, el poliestireno se utiliza por su capacidad aislante.";
-			break;
-		case 2:
-			return "Llanta";
-			break;
-		case 3:
-			return "PVC";
-			break;
-		case 4:
-			return "Cubeta";
-			break;
-		case 5:
-			return "Sarten";
-			break;
-		default:
-			return "-";
-			break;
-		}
-		*/
 	}
 
 	private string getOutroMessageByMonomer(int m) {
 		switch(m) {
 		case 0:
 			return "Las botellas de plástico son increíblemente usadas en empaque y distribución de toda clase de productos cotidianos.";
-			break;
 		case 1:
 			return "Industrial y domésticamente, el poliestireno se utiliza por su capacidad aislante.";
-			break;
 		case 2:
 			return "Un plástico de polipropileno se utiliza como contenedor por su dureza por encima de uno de polietileno.";
-			break;
 		case 3:
 			return "Los tubos de PVC son famosos por su resistencia y su aislamiento térmico.";
-			break;
 		case 4:
 			return "El teflón está siempre presente en utensilios de cocina por dejar nada pegado.";
-			break;
 		case 5:
 			return "El caucho derivado del polibutadieno se encuentra cualquier neumático.";
-			break;
 		default:
 			return "-";
-			break;
 		}
 	}
 }
