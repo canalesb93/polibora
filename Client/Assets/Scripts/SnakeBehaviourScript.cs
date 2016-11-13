@@ -24,6 +24,7 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	public GameObject policloruro;
 	public GameObject teflon;
 	public GameObject polibutadieno;
+	public GameObject reaccion;
 	// foodobjects end
 	public GameObject fire;
 	public Transform northWall, westWall, eastWall, southWall;
@@ -37,9 +38,13 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	private bool exit = false;
 	private bool firstTimeFire = true;
 	private bool firstTimeMonomer = true;
+	private bool showEducation1 = true;
+	private bool showEducation2 = false;
+	private bool showEducation3 = false;
 
 	private Text scoreText;
 	private GameObject currentFire;
+	private GameObject currentReaction;
 	private List<GameObject> monomers = new List<GameObject>();
 	private int score = 0;
 
@@ -76,11 +81,25 @@ public class SnakeBehaviourScript : MonoBehaviour {
 	// Handles controls.
 	void Update () {
 
+
 		// if message is not shown, execute game...
 		if (!message.IsShown()) {
+			if (currentReaction) {
+				Destroy(currentReaction);
+			}
+
 			if (exit) {
 				SceneManager.LoadScene ("Menu", LoadSceneMode.Single);
 			}
+
+			if (showEducation1) {
+				ShowEducation1 ();
+			} else if (showEducation2) {
+				ShowEducation2 ();
+			} else if (showEducation3) {
+				ShowEducation3 ();
+			}
+
 
 			// Update Steps
 			if (timeToStep <= 0f) {
@@ -196,6 +215,13 @@ public class SnakeBehaviourScript : MonoBehaviour {
 		currentFire = (GameObject)Instantiate (fire, new Vector2 (x, y), Quaternion.identity);
 	}
 
+	public void SpawnReaction(){
+		int x = 0;
+		int y = 5;
+
+		currentReaction = (GameObject)Instantiate (reaccion, new Vector2 (x, y), Quaternion.identity);
+	}
+
 	// ========== Events ==========
 
 	// Handles collisions.
@@ -255,13 +281,31 @@ public class SnakeBehaviourScript : MonoBehaviour {
 
 	private void ShowIntroMessage() {
 		message.ShowMessage (getMonomerNameByMonomer(levelMonomer) + "\n"+getIntroMessageByMonomer(levelMonomer));
+		SpawnReaction();
 	}
 
 	private void ShowOutroMessage() {
 		string victoryMessage = "Game Over!\nObtuviste " + snakeParts.Count + " monomeros, haz creado " + (snakeParts.Count / 10);
 		message.ShowMessage (victoryMessage + " " + getProductNameByMonomer(levelMonomer) + "s\n" + getOutroMessageByMonomer(levelMonomer));
+		SpawnReaction();
 	}
 
+	private void ShowEducation1(){
+		showEducation1=false;
+		message.ShowMessage ("¡Prepárate para sintetizar polímeros de adición!\n\nLa reacción de adición tiene 3 pasos:\nIniciación, Crecimiento y Terminación\n");
+		showEducation2 = true;
+	}
+
+	private void ShowEducation2(){
+		showEducation2=false;
+		message.ShowMessage ("Iniciación: CH2=CH2 + catalizador ⇒ •CH2–CH2• (radicales libres)\n\nCrecimiento: 2 •CH2–CH2• ⇒ •CH2–CH2–CH2–CH2•\n");
+		showEducation3 = true;
+	}
+
+	private void ShowEducation3(){
+		showEducation3=false;
+		message.ShowMessage ("Terminación: Los radicales libres de los extremos se unen a impurezas o bien se unen dos cadenas con un terminal neutralizado.\n");
+	}
 	// ========== Utils ==========
 
 	private bool positionTaken(float x, float y) {
